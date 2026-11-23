@@ -160,6 +160,13 @@ class SolicitudFlujoTest {
     }
 
     @Test
+    void motivoDe250Caracteres() {
+        String motivo = "x".repeat(250);
+        SolicitudDto s = solicitudes.crear(vict, new CrearSolicitudRequest(lc1, lunes, bloquesNumero(9), motivo, 10));
+        assertThat(s.actividad()).hasSize(250);
+    }
+
+    @Test
     void cancelarSoloLaPropia() {
         SolicitudDto s = pedir(vict, lunes, 8);
         assertThat(estadoDe(() -> solicitudes.cancelar(otro, s.id()))).isEqualTo(HttpStatus.NOT_FOUND);

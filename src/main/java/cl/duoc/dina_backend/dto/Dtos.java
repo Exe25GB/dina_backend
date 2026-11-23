@@ -78,7 +78,7 @@ public final class Dtos {
             @NotNull(message = "es obligatorio") Long espacioId,
             @NotNull(message = "es obligatoria") LocalDate fecha,
             @NotEmpty(message = "debe incluir al menos un bloque") List<@NotNull Long> bloqueIds,
-            @NotBlank(message = "es obligatoria") @Size(max = 150, message = "máximo 150 caracteres") String actividad,
+            @NotBlank(message = "es obligatoria") @Size(max = 250, message = "máximo 250 caracteres") String actividad,
             @Min(value = 1, message = "debe ser al menos 1") int asistentes) {}
 
     public record AprobarRequest(@Size(max = 300, message = "máximo 300 caracteres") String comentario) {}

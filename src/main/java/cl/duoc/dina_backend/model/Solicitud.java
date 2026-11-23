@@ -45,7 +45,7 @@ public class Solicitud {
     private List<BloqueHorario> bloques = new ArrayList<>();
 
     /** Actividad o curso para el que se pide el espacio. */
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 250)
     private String actividad;
 
     @Column(nullable = false)
