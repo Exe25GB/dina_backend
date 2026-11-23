@@ -26,12 +26,15 @@ En **EC2** (guía del curso): `mvn clean package -DskipTests` y luego
 
 ## Datos de prueba
 
-Se crean solos al iniciar, solo si faltan.
+Se crean solos al iniciar, solo si faltan (si ya existen, solo se corrige el nombre).
 
-| Correo | Rol | Contraseña |
-|---|---|---|
-| exe.guzman@duocuc.cl | ADMIN | `duoc1234` |
-| vict.godoy@duocuc.cl | USUARIO | `duoc1234` |
+| Correo | Nombre | Rol | Tipo de cuenta | Contraseña |
+|---|---|---|---|---|
+| exe.guzman@duocuc.cl | Exequiel Guzman | ADMIN | Estudiante | `duoc1234` |
+| vict.godoy@duocuc.cl | Victor Godoy | USUARIO | Estudiante | `duoc1234` |
+| nan.bernal@profesor.duoc.cl | Nancy Beatriz Bernal | USUARIO | Docente | `duoc1234` |
+
+El tipo de cuenta (Estudiante / Docente) lo deduce la app del dominio del correo.
 
 La contraseña se cambia con la variable `DINA_SEED_PASSWORD` antes del primer inicio. **Cámbiala antes de publicar el backend.**
 

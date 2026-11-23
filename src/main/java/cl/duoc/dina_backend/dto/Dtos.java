@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 /**
@@ -23,9 +24,16 @@ public final class Dtos {
 
     public record LoginResponse(String token, LocalDateTime expiraEn, UsuarioDto usuario) {}
 
-    public record UsuarioDto(Long id, String correo, String nombre, Rol rol) {
+    /**
+     * @param fotoUrl ruta relativa de la foto ("api/usuarios/5/foto?v=1732..."), o null si no tiene.
+     *                Cambia cada vez que se sube una foto nueva.
+     */
+    public record UsuarioDto(Long id, String correo, String nombre, Rol rol, String fotoUrl) {
         public static UsuarioDto de(Usuario u) {
-            return new UsuarioDto(u.getId(), u.getCorreo(), u.getNombre(), u.getRol());
+            String fotoUrl = u.getFotoActualizadaEn() == null ? null
+                    : "api/usuarios/" + u.getId() + "/foto?v="
+                      + u.getFotoActualizadaEn().toInstant(ZoneOffset.UTC).toEpochMilli();
+            return new UsuarioDto(u.getId(), u.getCorreo(), u.getNombre(), u.getRol(), fotoUrl);
         }
     }
 
@@ -83,9 +91,8 @@ public final class Dtos {
 
     public record AprobarRequest(@Size(max = 300, message = "máximo 300 caracteres") String comentario) {}
 
-    public record RechazarRequest(
-            @NotBlank(message = "es obligatorio indicar el motivo")
-            @Size(max = 300, message = "máximo 300 caracteres") String motivo) {}
+    /** El motivo es opcional; si se indica, se incluye en la notificación al usuario. */
+    public record RechazarRequest(@Size(max = 300, message = "máximo 300 caracteres") String motivo) {}
 
     public record SolicitudDto(
             Long id, EspacioDto espacio, LocalDate fecha, List<BloqueDto> bloques,

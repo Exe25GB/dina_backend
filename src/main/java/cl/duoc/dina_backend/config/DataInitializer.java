@@ -52,12 +52,24 @@ public class DataInitializer implements CommandLineRunner {
     // ── Usuarios de prueba ──────────────────────────────────────────────
 
     private void crearUsuarios() {
-        usuario("exe.guzman@duocuc.cl", "Exe Guzmán", Rol.ADMIN);
-        usuario("vict.godoy@duocuc.cl", "Vict Godoy", Rol.USUARIO);
+        // Nombre y apellido: la app arma las iniciales de la foto por defecto con ellos ("EG", "VG")
+        usuario("exe.guzman@duocuc.cl", "Exequiel Guzman", Rol.ADMIN);
+        usuario("vict.godoy@duocuc.cl", "Victor Godoy", Rol.USUARIO);
+        // Docente: lo indica el dominio @profesor.duoc.cl (en el backend es un USUARIO normal)
+        usuario("nan.bernal@profesor.duoc.cl", "Nancy Beatriz Bernal", Rol.USUARIO);
     }
 
+    /** Crea el usuario de prueba; si ya existe, solo corrige el nombre (no toca contraseña, rol ni foto). */
     private void usuario(String correo, String nombre, Rol rol) {
-        if (usuarioRepository.findByCorreoIgnoreCase(correo).isPresent()) return;
+        var existente = usuarioRepository.findByCorreoIgnoreCase(correo);
+        if (existente.isPresent()) {
+            Usuario u = existente.get();
+            if (!u.getNombre().equals(nombre)) {
+                log.info("Usuario de prueba {}: nombre '{}' → '{}'", correo, u.getNombre(), nombre);
+                u.setNombre(nombre);
+            }
+            return;
+        }
         String hash = passwordEncoder.encode(props.seed().passwordInicial());
         usuarioRepository.save(new Usuario(correo, nombre, hash, rol));
         log.info("Usuario de prueba creado: {} ({})", correo, rol);

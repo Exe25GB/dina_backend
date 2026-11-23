@@ -40,9 +40,9 @@ public class AdminSolicitudController {
 
     @PatchMapping("/{id}/rechazar")
     public SolicitudDto rechazar(@UsuarioActual Usuario admin, @PathVariable Long id,
-                                 @Valid @RequestBody RechazarRequest req) {
+                                 @Valid @RequestBody(required = false) RechazarRequest req) {
         exigirAdmin(admin);
-        return solicitudService.rechazar(admin, id, req.motivo());
+        return solicitudService.rechazar(admin, id, req == null ? null : req.motivo());
     }
 
     private static void exigirAdmin(Usuario usuario) {

@@ -55,7 +55,7 @@ public class Solicitud {
     @Column(nullable = false, length = 20)
     private EstadoSolicitud estado = EstadoSolicitud.PENDIENTE;
 
-    /** Comentario del administrador (obligatorio al rechazar). */
+    /** Comentario del administrador al aprobar o rechazar (opcional). */
     @Column(name = "comentario_admin", length = 300)
     private String comentarioAdmin;
 

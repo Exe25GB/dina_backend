@@ -106,6 +106,19 @@ public class SolicitudService {
                 .map(SolicitudDto::de).toList();
     }
 
+    /**
+     * Detalle de una solicitud. La ve quien la pidió o un administrador; para cualquier otro
+     * "no existe" (no se revela que el id es de otra persona).
+     */
+    @Transactional(readOnly = true)
+    public SolicitudDto detalle(Usuario usuario, Long id) {
+        Solicitud s = buscar(id);
+        if (!usuario.esAdmin() && !s.getUsuario().getId().equals(usuario.getId())) {
+            throw ApiException.noEncontrado("Solicitud no encontrada");
+        }
+        return SolicitudDto.de(s);
+    }
+
     /** El usuario puede cancelar su solicitud pendiente, o una aprobada que todavía no comienza. */
     @Transactional
     public SolicitudDto cancelar(Usuario usuario, Long id) {
@@ -167,7 +180,7 @@ public class SolicitudService {
     @Transactional
     public SolicitudDto rechazar(Usuario admin, Long id, String motivo) {
         Solicitud s = buscarPendiente(id);
-        marcarRevisada(s, admin, EstadoSolicitud.RECHAZADA, motivo.trim());
+        marcarRevisada(s, admin, EstadoSolicitud.RECHAZADA, textoOpcional(motivo));
         notificarRechazo(s);
         return SolicitudDto.de(s);
     }
@@ -215,7 +228,8 @@ public class SolicitudService {
     private void notificarRechazo(Solicitud s) {
         notificaciones.notificar(s.getUsuario(), TipoNotificacion.SOLICITUD_RECHAZADA,
                 "Solicitud rechazada",
-                "Tu solicitud de " + descripcion(s) + " fue rechazada. Motivo: " + s.getComentarioAdmin(),
+                "Tu solicitud de " + descripcion(s) + " fue rechazada."
+                        + (s.getComentarioAdmin() != null ? " Motivo: " + s.getComentarioAdmin() : ""),
                 s.getId());
     }
 

@@ -77,6 +77,8 @@ class SolicitudFlujoTest {
     void datosDePrueba() {
         assertThat(admin.getRol()).isEqualTo(Rol.ADMIN);
         assertThat(vict.getRol()).isEqualTo(Rol.USUARIO);
+        assertThat(usuarios.findByCorreoIgnoreCase("nan.bernal@profesor.duoc.cl"))
+                .hasValueSatisfying(u -> assertThat(u.getNombre()).isEqualTo("Nancy Beatriz Bernal"));
         assertThat(bloques.count()).isEqualTo(14);
         assertThat(espacios.count()).isEqualTo(79);
     }
@@ -157,6 +159,24 @@ class SolicitudFlujoTest {
         assertThat(notificaciones.contarNoLeidas(vict)).isEqualTo(1);
         notificaciones.marcarTodasLeidas(vict);
         assertThat(notificaciones.contarNoLeidas(vict)).isZero();
+    }
+
+    @Test
+    void rechazarSinMotivo() {
+        SolicitudDto s = pedir(vict, lunes, 7);
+        SolicitudDto r = solicitudes.rechazar(admin, s.id(), "  ");
+        assertThat(r.estado()).isEqualTo(EstadoSolicitud.RECHAZADA);
+        assertThat(r.comentarioAdmin()).isNull();
+        assertThat(notificaciones.listar(vict))
+                .anyMatch(n -> n.tipo() == TipoNotificacion.SOLICITUD_RECHAZADA && !n.mensaje().contains("Motivo"));
+    }
+
+    @Test
+    void detalleSoloParaDuenoOAdmin() {
+        SolicitudDto s = pedir(vict, lunes, 8);
+        assertThat(solicitudes.detalle(vict, s.id()).id()).isEqualTo(s.id());
+        assertThat(solicitudes.detalle(admin, s.id()).solicitante().correo()).isEqualTo("vict.godoy@duocuc.cl");
+        assertThat(estadoDe(() -> solicitudes.detalle(otro, s.id()))).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

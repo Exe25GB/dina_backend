@@ -33,6 +33,12 @@ public class SolicitudController {
         return solicitudService.mias(usuario);
     }
 
+    /** Una solicitud: la propia, o cualquiera si es administrador. */
+    @GetMapping("/{id}")
+    public SolicitudDto detalle(@UsuarioActual Usuario usuario, @PathVariable Long id) {
+        return solicitudService.detalle(usuario, id);
+    }
+
     @PatchMapping("/{id}/cancelar")
     public SolicitudDto cancelar(@UsuarioActual Usuario usuario, @PathVariable Long id) {
         return solicitudService.cancelar(usuario, id);

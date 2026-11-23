@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -51,6 +53,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> parametroInvalido(MethodArgumentTypeMismatchException e) {
         return ErrorResponse.de(HttpStatus.BAD_REQUEST, "Valor inválido para el parámetro '" + e.getName() + "'");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> archivoMuyGrande(MaxUploadSizeExceededException e) {
+        return ErrorResponse.de(HttpStatus.CONTENT_TOO_LARGE, "El archivo no puede pesar más de 2 MB");
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> faltaArchivo(MissingServletRequestPartException e) {
+        return ErrorResponse.de(HttpStatus.BAD_REQUEST, "Falta el archivo '" + e.getRequestPartName() + "'");
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

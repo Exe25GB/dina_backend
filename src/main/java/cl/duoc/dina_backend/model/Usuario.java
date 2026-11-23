@@ -1,6 +1,7 @@
 package cl.duoc.dina_backend.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -32,6 +33,14 @@ public class Usuario {
 
     @Column(nullable = false)
     private boolean activo = true;
+
+    /**
+     * Cuándo se cambió la foto de perfil (null = sin foto). La imagen vive en la tabla fotos_perfil
+     * para no cargarla cada vez que se lee un usuario; esta fecha es la "versión" de la URL,
+     * así la app no muestra una foto antigua guardada en caché.
+     */
+    @Column(name = "foto_actualizada_en")
+    private LocalDateTime fotoActualizadaEn;
 
     public Usuario(String correo, String nombre, String passwordHash, Rol rol) {
         this.correo = correo;
