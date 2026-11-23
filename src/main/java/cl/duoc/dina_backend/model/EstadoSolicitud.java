@@ -5,6 +5,6 @@ public enum EstadoSolicitud {
     PENDIENTE,
     APROBADA,
     RECHAZADA,
-    /** Cancelada por el mismo usuario. */
+    /** Cancelada por el mismo usuario, o por un administrador si ya estaba aprobada. */
     CANCELADA
 }

@@ -189,7 +189,7 @@ class SolicitudFlujoTest {
     @Test
     void cancelarSoloLaPropia() {
         SolicitudDto s = pedir(vict, lunes, 8);
-        assertThat(estadoDe(() -> solicitudes.cancelar(otro, s.id()))).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(solicitudes.cancelar(vict, s.id()).estado()).isEqualTo(EstadoSolicitud.CANCELADA);
+        assertThat(estadoDe(() -> solicitudes.cancelar(otro, s.id(), null))).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(solicitudes.cancelar(vict, s.id(), null).estado()).isEqualTo(EstadoSolicitud.CANCELADA);
     }
 }

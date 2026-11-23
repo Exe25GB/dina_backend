@@ -1,5 +1,6 @@
 package cl.duoc.dina_backend.controller;
 
+import cl.duoc.dina_backend.dto.Dtos.CancelarRequest;
 import cl.duoc.dina_backend.dto.Dtos.CrearSolicitudRequest;
 import cl.duoc.dina_backend.dto.Dtos.SolicitudDto;
 import cl.duoc.dina_backend.model.Usuario;
@@ -39,8 +40,10 @@ public class SolicitudController {
         return solicitudService.detalle(usuario, id);
     }
 
+    /** Cancela la propia solicitud (pendiente o aprobada). Cuerpo opcional: { "motivo": "..." }. */
     @PatchMapping("/{id}/cancelar")
-    public SolicitudDto cancelar(@UsuarioActual Usuario usuario, @PathVariable Long id) {
-        return solicitudService.cancelar(usuario, id);
+    public SolicitudDto cancelar(@UsuarioActual Usuario usuario, @PathVariable Long id,
+                                 @Valid @RequestBody(required = false) CancelarRequest req) {
+        return solicitudService.cancelar(usuario, id, req == null ? null : req.motivo());
     }
 }

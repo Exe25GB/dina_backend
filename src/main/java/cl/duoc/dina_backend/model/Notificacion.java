@@ -1,6 +1,8 @@
 package cl.duoc.dina_backend.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +25,7 @@ public class Notificacion {
     private Usuario usuario;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR) // texto, no ENUM de la base: así se pueden agregar valores nuevos
     @Column(nullable = false, length = 30)
     private TipoNotificacion tipo;
 

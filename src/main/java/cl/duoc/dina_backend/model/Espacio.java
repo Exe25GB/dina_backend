@@ -1,6 +1,8 @@
 package cl.duoc.dina_backend.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -25,6 +27,7 @@ public class Espacio {
     private String nombre;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR) // texto, no ENUM de la base: así se pueden agregar valores nuevos
     @Column(nullable = false, length = 20)
     private Edificio edificio;
 
@@ -32,6 +35,7 @@ public class Espacio {
     private int piso;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR) // texto, no ENUM de la base: así se pueden agregar valores nuevos
     @Column(nullable = false, length = 20)
     private TipoEspacio tipo;
 
@@ -40,6 +44,7 @@ public class Espacio {
 
     /** Escuela de uso principal; null si es de uso general. */
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR) // texto, no ENUM de la base: así se pueden agregar valores nuevos
     @Column(length = 40)
     private Escuela escuela;
 

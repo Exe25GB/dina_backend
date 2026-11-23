@@ -1,6 +1,8 @@
 package cl.duoc.dina_backend.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -52,6 +54,7 @@ public class Solicitud {
     private int asistentes;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR) // texto, no ENUM de la base: así se pueden agregar valores nuevos
     @Column(nullable = false, length = 20)
     private EstadoSolicitud estado = EstadoSolicitud.PENDIENTE;
 
@@ -68,4 +71,15 @@ public class Solicitud {
 
     @Column(name = "revisada_en")
     private LocalDateTime revisadaEn;
+
+    /**
+     * Cuándo se aprobó (null = nunca). Desde ese momento la solicitud tiene chat, aunque después
+     * se cancele: por eso no basta con mirar el estado.
+     */
+    @Column(name = "aprobada_en")
+    private LocalDateTime aprobadaEn;
+
+    /** Cuándo un administrador pasó el chat a "Cerrados" (null = no lo ha cerrado). */
+    @Column(name = "chat_cerrado_en")
+    private LocalDateTime chatCerradoEn;
 }

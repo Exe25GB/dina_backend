@@ -1,6 +1,7 @@
 package cl.duoc.dina_backend.controller;
 
 import cl.duoc.dina_backend.dto.Dtos.AprobarRequest;
+import cl.duoc.dina_backend.dto.Dtos.CancelarRequest;
 import cl.duoc.dina_backend.dto.Dtos.RechazarRequest;
 import cl.duoc.dina_backend.dto.Dtos.SolicitudDto;
 import cl.duoc.dina_backend.exception.ApiException;
@@ -43,6 +44,14 @@ public class AdminSolicitudController {
                                  @Valid @RequestBody(required = false) RechazarRequest req) {
         exigirAdmin(admin);
         return solicitudService.rechazar(admin, id, req == null ? null : req.motivo());
+    }
+
+    /** Cancela una reserva ya aprobada de otra persona. El motivo es obligatorio. */
+    @PatchMapping("/{id}/cancelar")
+    public SolicitudDto cancelar(@UsuarioActual Usuario admin, @PathVariable Long id,
+                                 @Valid @RequestBody CancelarRequest req) {
+        exigirAdmin(admin);
+        return solicitudService.cancelar(admin, id, req.motivo());
     }
 
     private static void exigirAdmin(Usuario usuario) {

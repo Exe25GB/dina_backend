@@ -39,11 +39,14 @@ public class SolicitudService {
     private final EspacioService espacioService;
     private final HorarioService horario;
     private final NotificacionService notificaciones;
+    private final ChatService chat;
     private final DinaProperties props;
 
     public SolicitudService(SolicitudRepository solicitudRepository, EspacioRepository espacioRepository,
                             BloqueHorarioRepository bloqueRepository, EspacioService espacioService,
-                            HorarioService horario, NotificacionService notificaciones, DinaProperties props) {
+                            HorarioService horario, NotificacionService notificaciones, ChatService chat,
+                            DinaProperties props) {
+        this.chat = chat;
         this.solicitudRepository = solicitudRepository;
         this.espacioRepository = espacioRepository;
         this.bloqueRepository = bloqueRepository;
@@ -119,20 +122,49 @@ public class SolicitudService {
         return SolicitudDto.de(s);
     }
 
-    /** El usuario puede cancelar su solicitud pendiente, o una aprobada que todavía no comienza. */
+    /**
+     * Cancelar una reserva que todavía no comienza.
+     * - Quien la pidió: su solicitud pendiente o aprobada, al instante; el motivo es opcional.
+     * - Un administrador: solo una aprobada de otra persona, y debe explicar el motivo
+     *   (queda en el chat y le llega una notificación al usuario).
+     * Si la solicitud tiene chat, queda un aviso en él y el chat sigue abierto para aclarar dudas.
+     */
     @Transactional
-    public SolicitudDto cancelar(Usuario usuario, Long id) {
-        Solicitud s = buscar(id);
-        if (!s.getUsuario().getId().equals(usuario.getId())) {
-            throw ApiException.noEncontrado("Solicitud no encontrada");
-        }
-        if (s.getEstado() != EstadoSolicitud.PENDIENTE && s.getEstado() != EstadoSolicitud.APROBADA) {
-            throw ApiException.conflicto("La solicitud ya está " + s.getEstado().name().toLowerCase());
+    public SolicitudDto cancelar(Usuario usuario, Long id, String motivo) {
+        // Bloquea la fila, igual que aprobar/rechazar: si el admin aprueba mientras el usuario cancela,
+        // el segundo ve el estado ya cambiado (no quedan una notificación de "aprobada" y una cancelación)
+        Solicitud s = solicitudRepository.findByIdParaActualizar(id)
+                .orElseThrow(() -> ApiException.noEncontrado("Solicitud no encontrada"));
+        boolean esDueno = s.getUsuario().getId().equals(usuario.getId());
+        if (!esDueno && !usuario.esAdmin()) throw ApiException.noEncontrado("Solicitud no encontrada");
+
+        String explicacion = textoOpcional(motivo);
+        if (esDueno) {
+            if (s.getEstado() != EstadoSolicitud.PENDIENTE && s.getEstado() != EstadoSolicitud.APROBADA) {
+                throw ApiException.conflicto("La solicitud ya está " + s.getEstado().name().toLowerCase());
+            }
+        } else {
+            if (s.getEstado() != EstadoSolicitud.APROBADA) {
+                throw ApiException.conflicto("Solo se puede cancelar una reserva aprobada");
+            }
+            if (explicacion == null) throw ApiException.invalido("Explica al usuario por qué se cancela su reserva");
         }
         if (horario.yaPaso(s.getFecha(), s.getBloques().get(0))) {
             throw ApiException.conflicto("La reserva ya comenzó, no se puede cancelar");
         }
+
         s.setEstado(EstadoSolicitud.CANCELADA);
+        String sufijo = explicacion != null ? " Motivo: " + explicacion : "";
+        if (esDueno) {
+            chat.mensajeDelSistema(s, s.getUsuario().getNombre() + " canceló la reserva." + sufijo);
+        } else {
+            s.setComentarioAdmin(explicacion);
+            chat.mensajeDelSistema(s, "El administrador canceló la reserva." + sufijo);
+            notificaciones.notificar(s.getUsuario(), TipoNotificacion.RESERVA_CANCELADA,
+                    "Reserva cancelada",
+                    "Tu reserva de " + descripcion(s) + " fue cancelada por el administrador." + sufijo,
+                    s.getId());
+        }
         return SolicitudDto.de(s);
     }
 
@@ -161,6 +193,10 @@ public class SolicitudService {
         }
 
         marcarRevisada(s, admin, EstadoSolicitud.APROBADA, textoOpcional(comentario));
+        // Desde ahora la solicitud tiene chat (abierto hasta que termine la reserva)
+        s.setAprobadaEn(ahora());
+        chat.mensajeDelSistema(s, "Solicitud aprobada. Este chat queda abierto hasta que termine la reserva."
+                + (s.getComentarioAdmin() != null ? " Comentario: " + s.getComentarioAdmin() : ""));
         notificaciones.notificar(s.getUsuario(), TipoNotificacion.SOLICITUD_APROBADA,
                 "Solicitud aprobada",
                 "Tu solicitud de " + descripcion(s) + " fue aprobada."

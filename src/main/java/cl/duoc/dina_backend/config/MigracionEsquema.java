@@ -30,6 +30,16 @@ public class MigracionEsquema implements CommandLineRunner {
     public void run(String... args) {
         // El motivo de la reserva ("actividad") pasó de 150 a 250 caracteres
         ejecutar("ALTER TABLE solicitudes MODIFY COLUMN actividad VARCHAR(250) NOT NULL");
+        // Chat: las solicitudes aprobadas antes de que existiera "aprobada_en" también tienen chat
+        ejecutar("UPDATE solicitudes SET aprobada_en = revisada_en WHERE estado = 'APROBADA' AND aprobada_en IS NULL");
+        // Columnas de enums como texto (Hibernate las había creado como ENUM de la base, que rechaza
+        // los valores nuevos; p. ej. la notificación RESERVA_CANCELADA)
+        ejecutar("ALTER TABLE notificaciones MODIFY COLUMN tipo VARCHAR(30) NOT NULL");
+        ejecutar("ALTER TABLE solicitudes MODIFY COLUMN estado VARCHAR(20) NOT NULL");
+        ejecutar("ALTER TABLE usuarios MODIFY COLUMN rol VARCHAR(20) NOT NULL");
+        ejecutar("ALTER TABLE espacios MODIFY COLUMN edificio VARCHAR(20) NOT NULL");
+        ejecutar("ALTER TABLE espacios MODIFY COLUMN tipo VARCHAR(20) NOT NULL");
+        ejecutar("ALTER TABLE espacios MODIFY COLUMN escuela VARCHAR(40)");
     }
 
     private void ejecutar(String sql) {

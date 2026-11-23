@@ -104,24 +104,50 @@ public final class Dtos {
 
     public record AprobarRequest(@Size(max = 300, message = "máximo 300 caracteres") String comentario) {}
 
+    /**
+     * Cancelar una reserva. Para el usuario el motivo es opcional; para un administrador que cancela
+     * una reserva ajena (ya aprobada) es obligatorio: se le explica al usuario en el chat.
+     */
+    public record CancelarRequest(@Size(max = 300, message = "máximo 300 caracteres") String motivo) {}
+
     /** El motivo es opcional; si se indica, se incluye en la notificación al usuario. */
     public record RechazarRequest(@Size(max = 300, message = "máximo 300 caracteres") String motivo) {}
 
+    /** [tieneChat]: se aprobó alguna vez (aunque después se haya cancelado). */
     public record SolicitudDto(
             Long id, EspacioDto espacio, LocalDate fecha, List<BloqueDto> bloques,
             LocalTime horaInicio, LocalTime horaFin,
             String actividad, int asistentes, EstadoSolicitud estado,
             String comentarioAdmin, UsuarioDto solicitante,
-            LocalDateTime creadaEn, LocalDateTime revisadaEn) {
+            LocalDateTime creadaEn, LocalDateTime revisadaEn, boolean tieneChat) {
         public static SolicitudDto de(Solicitud s) {
             List<BloqueDto> bloques = s.getBloques().stream().map(BloqueDto::de).toList();
             return new SolicitudDto(s.getId(), EspacioDto.de(s.getEspacio()), s.getFecha(), bloques,
                     bloques.get(0).horaInicio(), bloques.get(bloques.size() - 1).horaFin(),
                     s.getActividad(), s.getAsistentes(), s.getEstado(),
                     s.getComentarioAdmin(), UsuarioDto.de(s.getUsuario()),
-                    s.getCreadaEn(), s.getRevisadaEn());
+                    s.getCreadaEn(), s.getRevisadaEn(), s.getAprobadaEn() != null);
         }
     }
+
+    // ── Chat ────────────────────────────────────────────────────────────
+
+    /** [autor] null = mensaje del sistema ("Solicitud aprobada", "Reserva cancelada"...). */
+    public record MensajeDto(Long id, String texto, UsuarioDto autor, LocalDateTime creadoEn) {
+        public static MensajeDto de(Mensaje m) {
+            return new MensajeDto(m.getId(), m.getTexto(),
+                    m.getAutor() == null ? null : UsuarioDto.de(m.getAutor()), m.getCreadoEn());
+        }
+    }
+
+    /** Un chat de la lista: la solicitud, si está abierto o cerrado y su último mensaje. */
+    public record ChatDto(SolicitudDto solicitud, EstadoChat estado, MensajeDto ultimoMensaje) {}
+
+    public record ChatDetalleDto(ChatDto chat, List<MensajeDto> mensajes) {}
+
+    public record EnviarMensajeRequest(
+            @NotBlank(message = "no puede estar vacío")
+            @Size(max = Mensaje.MAX_TEXTO, message = "máximo " + Mensaje.MAX_TEXTO + " caracteres") String texto) {}
 
     // ── Notificaciones ──────────────────────────────────────────────────
 

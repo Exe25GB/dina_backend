@@ -24,6 +24,13 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
     @EntityGraph(attributePaths = {"espacio", "usuario", "bloques"})
     List<Solicitud> findAllByOrderByFechaDescCreadaEnDesc();
 
+    /** Solicitudes con chat (las que alguna vez se aprobaron). */
+    @EntityGraph(attributePaths = {"espacio", "usuario", "bloques"})
+    List<Solicitud> findByAprobadaEnIsNotNull();
+
+    @EntityGraph(attributePaths = {"espacio", "usuario", "bloques"})
+    List<Solicitud> findByUsuarioIdAndAprobadaEnIsNotNull(Long usuarioId);
+
     /** Lee la solicitud bloqueando su fila hasta terminar la transacción (revisión por un admin). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Solicitud s where s.id = :id")
