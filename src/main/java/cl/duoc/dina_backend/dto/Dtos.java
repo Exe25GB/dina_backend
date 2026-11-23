@@ -95,12 +95,24 @@ public final class Dtos {
 
     // ── Solicitudes ─────────────────────────────────────────────────────
 
+    /**
+     * [confirmarCruce]: el usuario ya sabe que tiene otra solicitud a esa hora (en otro espacio) y
+     * quiere pedir igual. Opcional (si no viene, es false): sin él, el backend responde 409 con codigo
+     * CRUCE_PROPIO para que la app pregunte.
+     */
     public record CrearSolicitudRequest(
             @NotNull(message = "es obligatorio") Long espacioId,
             @NotNull(message = "es obligatoria") LocalDate fecha,
             @NotEmpty(message = "debe incluir al menos un bloque") List<@NotNull Long> bloqueIds,
             @NotBlank(message = "es obligatoria") @Size(max = 250, message = "máximo 250 caracteres") String actividad,
-            @Min(value = 1, message = "debe ser al menos 1") int asistentes) {}
+            @Min(value = 1, message = "debe ser al menos 1") int asistentes,
+            Boolean confirmarCruce) {
+
+        /** Sin confirmar el cruce (lo usual). */
+        public CrearSolicitudRequest(Long espacioId, LocalDate fecha, List<Long> bloqueIds, String actividad, int asistentes) {
+            this(espacioId, fecha, bloqueIds, actividad, asistentes, false);
+        }
+    }
 
     public record AprobarRequest(@Size(max = 300, message = "máximo 300 caracteres") String comentario) {}
 
@@ -140,8 +152,12 @@ public final class Dtos {
         }
     }
 
-    /** Un chat de la lista: la solicitud, si está abierto o cerrado y su último mensaje. */
-    public record ChatDto(SolicitudDto solicitud, EstadoChat estado, MensajeDto ultimoMensaje) {}
+    /**
+     * Un chat de la lista: la solicitud, si está abierto o cerrado y su último mensaje.
+     * [conversacionIniciada]: alguien (usuario o admin) ya escribió; si no, solo hay avisos del sistema.
+     */
+    public record ChatDto(SolicitudDto solicitud, EstadoChat estado, MensajeDto ultimoMensaje,
+                          boolean conversacionIniciada) {}
 
     public record ChatDetalleDto(ChatDto chat, List<MensajeDto> mensajes) {}
 

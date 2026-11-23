@@ -14,4 +14,7 @@ public interface MensajeRepository extends JpaRepository<Mensaje, Long> {
 
     @EntityGraph(attributePaths = {"autor"})
     Optional<Mensaje> findFirstBySolicitudIdOrderByIdDesc(Long solicitudId);
+
+    /** ¿Alguna persona escribió? (los avisos del sistema no tienen autor y no cuentan). */
+    boolean existsBySolicitudIdAndAutorIsNotNull(Long solicitudId);
 }

@@ -8,10 +8,12 @@ import cl.duoc.dina_backend.dto.Dtos.SolicitudDto;
 import cl.duoc.dina_backend.exception.ApiException;
 import cl.duoc.dina_backend.model.EstadoChat;
 import cl.duoc.dina_backend.model.Mensaje;
+import cl.duoc.dina_backend.model.Rol;
 import cl.duoc.dina_backend.model.Solicitud;
 import cl.duoc.dina_backend.model.Usuario;
 import cl.duoc.dina_backend.repository.MensajeRepository;
 import cl.duoc.dina_backend.repository.SolicitudRepository;
+import cl.duoc.dina_backend.repository.UsuarioRepository;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -29,12 +31,17 @@ public class ChatService {
 
     private final SolicitudRepository solicitudRepository;
     private final MensajeRepository mensajeRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final NotificacionService notificaciones;
     private final DinaProperties props;
 
     public ChatService(SolicitudRepository solicitudRepository, MensajeRepository mensajeRepository,
+                       UsuarioRepository usuarioRepository, NotificacionService notificaciones,
                        DinaProperties props) {
         this.solicitudRepository = solicitudRepository;
         this.mensajeRepository = mensajeRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.notificaciones = notificaciones;
         this.props = props;
     }
 
@@ -50,10 +57,14 @@ public class ChatService {
                 .toList();
     }
 
-    /** El chat con sus mensajes posteriores a [despuesDe] (0 = todos): así la app pide solo los nuevos. */
-    @Transactional(readOnly = true)
+    /**
+     * El chat con sus mensajes posteriores a [despuesDe] (0 = todos): así la app pide solo los nuevos.
+     * Quien lo mira ya vio los mensajes: sus avisos de "mensaje nuevo" de este chat quedan leídos.
+     */
+    @Transactional
     public ChatDetalleDto detalle(Usuario usuario, Long solicitudId, long despuesDe) {
         Solicitud s = buscarChat(usuario, solicitudId);
+        notificaciones.marcarLeidosLosMensajesDe(usuario, s.getId());
         List<MensajeDto> mensajes = mensajeRepository
                 .findBySolicitudIdAndIdGreaterThanOrderByIdAsc(s.getId(), despuesDe).stream()
                 .map(MensajeDto::de).toList();
@@ -64,7 +75,21 @@ public class ChatService {
     public MensajeDto enviar(Usuario usuario, Long solicitudId, String texto) {
         Solicitud s = buscarChat(usuario, solicitudId);
         if (estado(s) == EstadoChat.CERRADO) throw ApiException.conflicto("El chat está cerrado");
-        return MensajeDto.de(mensajeRepository.save(new Mensaje(s, usuario, texto.trim(), ahora())));
+        Mensaje m = mensajeRepository.save(new Mensaje(s, usuario, texto.trim(), ahora()));
+        avisarALaOtraParte(s, usuario, m.getTexto());
+        return MensajeDto.de(m);
+    }
+
+    /** Si escribe quien pidió el espacio, se avisa a los administradores; si escribe un admin, a quien lo pidió. */
+    private void avisarALaOtraParte(Solicitud s, Usuario autor, String texto) {
+        String titulo = "Mensaje nuevo · " + s.getEspacio().getCodigo();
+        String mensaje = autor.getNombre() + ": " + (texto.length() > 120 ? texto.substring(0, 117) + "..." : texto);
+        List<Usuario> destinatarios = autor.getId().equals(s.getUsuario().getId())
+                ? usuarioRepository.findByRolAndActivoTrue(Rol.ADMIN)
+                : List.of(s.getUsuario());
+        destinatarios.stream()
+                .filter(u -> !u.getId().equals(autor.getId()))
+                .forEach(u -> notificaciones.avisarMensajeNuevo(u, s.getId(), titulo, mensaje));
     }
 
     /** Solo ADMIN: lo pasa a "Cerrados" (ya no se puede escribir). */
@@ -108,7 +133,8 @@ public class ChatService {
     private ChatDto aDto(Solicitud s) {
         MensajeDto ultimo = mensajeRepository.findFirstBySolicitudIdOrderByIdDesc(s.getId())
                 .map(MensajeDto::de).orElse(null);
-        return new ChatDto(SolicitudDto.de(s), estado(s), ultimo);
+        boolean iniciada = mensajeRepository.existsBySolicitudIdAndAutorIsNotNull(s.getId());
+        return new ChatDto(SolicitudDto.de(s), estado(s), ultimo, iniciada);
     }
 
     private static LocalDateTime ultimaActividad(ChatDto c) {

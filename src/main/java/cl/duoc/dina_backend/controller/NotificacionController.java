@@ -6,6 +6,7 @@ import cl.duoc.dina_backend.model.Usuario;
 import cl.duoc.dina_backend.security.UsuarioActual;
 import cl.duoc.dina_backend.service.NotificacionService;
 import java.util.List;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Avisos del usuario (pestaña "Avisos" de la app). */
@@ -33,6 +34,19 @@ public class NotificacionController {
     @PatchMapping("/{id}/leida")
     public NotificacionDto marcarLeida(@UsuarioActual Usuario usuario, @PathVariable Long id) {
         return notificacionService.marcarLeida(usuario, id);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> borrar(@UsuarioActual Usuario usuario, @PathVariable Long id) {
+        notificacionService.borrar(usuario, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Borra todas las notificaciones del usuario. */
+    @DeleteMapping
+    public ResponseEntity<Void> borrarTodas(@UsuarioActual Usuario usuario) {
+        notificacionService.borrarTodas(usuario);
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/leer-todas")

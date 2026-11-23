@@ -91,11 +91,13 @@ class ChatFlujoTest {
         ChatDto chat = chats.listar(vict).stream().filter(c -> c.solicitud().id().equals(s.id())).findFirst().orElseThrow();
         assertThat(chat.estado()).isEqualTo(EstadoChat.ABIERTO);
         assertThat(chat.ultimoMensaje().autor()).isNull(); // aviso del sistema
+        assertThat(chat.conversacionIniciada()).isFalse(); // solo el aviso: todavía en "Aceptados"
         assertThat(chat.ultimoMensaje().texto()).contains("aprobada");
 
         var enviado = chats.enviar(vict, s.id(), "  ¿Puedo llegar 10 minutos antes?  ");
         assertThat(enviado.texto()).isEqualTo("¿Puedo llegar 10 minutos antes?");
         chats.enviar(admin, s.id(), "Sí, sin problema");
+        assertThat(chats.detalle(vict, s.id(), 0).chat().conversacionIniciada()).isTrue();
 
         // Solo los mensajes nuevos (la app pregunta "después del último que tengo")
         assertThat(chats.detalle(admin, s.id(), enviado.id()).mensajes())

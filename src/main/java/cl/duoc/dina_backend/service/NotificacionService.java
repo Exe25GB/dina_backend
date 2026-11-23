@@ -73,4 +73,44 @@ public class NotificacionService {
     public int marcarTodasLeidas(Usuario usuario) {
         return repository.marcarTodasLeidas(usuario.getId());
     }
+
+    @Transactional
+    public void borrar(Usuario usuario, Long id) {
+        Notificacion n = repository.findByIdAndUsuarioId(id, usuario.getId())
+                .orElseThrow(() -> ApiException.noEncontrado("Notificación no encontrada"));
+        repository.delete(n);
+    }
+
+    @Transactional
+    public int borrarTodas(Usuario usuario) {
+        return repository.borrarTodas(usuario.getId());
+    }
+
+    /**
+     * "Mensaje nuevo en el chat": un solo aviso por chat mientras no se lea. Si ya hay uno sin leer,
+     * se actualiza con el último mensaje y sube al principio de la lista (en vez de llenarla).
+     */
+    @Transactional
+    public void avisarMensajeNuevo(Usuario destinatario, Long solicitudId, String titulo, String mensaje) {
+        Notificacion n = repository
+                .findFirstByUsuarioIdAndTipoAndSolicitudIdAndLeidaFalse(
+                        destinatario.getId(), TipoNotificacion.MENSAJE_NUEVO, solicitudId)
+                .orElse(null);
+        if (n == null) {
+            notificar(destinatario, TipoNotificacion.MENSAJE_NUEVO, titulo, mensaje, solicitudId);
+        } else {
+            n.setTitulo(titulo);
+            n.setMensaje(mensaje);
+            n.setCreadaEn(LocalDateTime.now(props.zona()));
+        }
+    }
+
+    /** Al abrir un chat, sus avisos de "mensaje nuevo" quedan leídos. */
+    @Transactional
+    public void marcarLeidosLosMensajesDe(Usuario usuario, Long solicitudId) {
+        // Uno a uno (no un UPDATE masivo): así los avisos ya cargados en esta transacción quedan al día
+        repository.findByUsuarioIdAndSolicitudIdAndTipoAndLeidaFalse(
+                        usuario.getId(), solicitudId, TipoNotificacion.MENSAJE_NUEVO)
+                .forEach(n -> n.setLeida(true));
+    }
 }

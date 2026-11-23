@@ -24,6 +24,10 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
     @EntityGraph(attributePaths = {"espacio", "usuario", "bloques"})
     List<Solicitud> findAllByOrderByFechaDescCreadaEnDesc();
 
+    /** Reservas de un día que todavía no reciben el recordatorio. */
+    @EntityGraph(attributePaths = {"espacio", "usuario", "bloques"})
+    List<Solicitud> findByEstadoAndFechaAndRecordatorioEnviadoEnIsNull(EstadoSolicitud estado, LocalDate fecha);
+
     /** Solicitudes con chat (las que alguna vez se aprobaron). */
     @EntityGraph(attributePaths = {"espacio", "usuario", "bloques"})
     List<Solicitud> findByAprobadaEnIsNotNull();
@@ -59,16 +63,16 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
                                  @Param("estados") Collection<EstadoSolicitud> estados,
                                  @Param("excluirId") Long excluirId);
 
-    /** Lo mismo, pero solo de un usuario (evita que pida dos veces el mismo horario). */
+    /** Lo mismo, pero las de un usuario en cualquier espacio (para avisarle que ya pidió algo a esa hora). */
     @Query("""
-            select count(distinct s) > 0 from Solicitud s join s.bloques b
+            select distinct s from Solicitud s join s.bloques b
             where s.usuario.id = :usuarioId
               and s.fecha = :fecha
               and s.estado in :estados
               and b.id in :bloqueIds
             """)
-    boolean usuarioTieneCruce(@Param("usuarioId") Long usuarioId,
-                              @Param("fecha") LocalDate fecha,
-                              @Param("bloqueIds") Collection<Long> bloqueIds,
-                              @Param("estados") Collection<EstadoSolicitud> estados);
+    List<Solicitud> crucesDelUsuario(@Param("usuarioId") Long usuarioId,
+                                     @Param("fecha") LocalDate fecha,
+                                     @Param("bloqueIds") Collection<Long> bloqueIds,
+                                     @Param("estados") Collection<EstadoSolicitud> estados);
 }

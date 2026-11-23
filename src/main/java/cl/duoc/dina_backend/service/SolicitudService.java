@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,8 +81,15 @@ public class SolicitudService {
         if (!solicitudRepository.buscarCruces(espacio.getId(), fecha, bloqueIds, APROBADAS, -1L).isEmpty()) {
             throw ApiException.conflicto("El espacio ya está reservado en ese horario");
         }
-        if (solicitudRepository.usuarioTieneCruce(usuario.getId(), fecha, bloqueIds, ACTIVAS)) {
-            throw ApiException.conflicto("Ya tienes una solicitud en ese horario");
+        // Puede pedir varios espacios a la misma hora (p. ej. para elegir después), pero:
+        // - el mismo espacio dos veces, no (sería un duplicado);
+        // - en otro espacio, solo si confirma que lo sabe.
+        List<Solicitud> mias = solicitudRepository.crucesDelUsuario(usuario.getId(), fecha, bloqueIds, ACTIVAS);
+        if (mias.stream().anyMatch(m -> m.getEspacio().getId().equals(espacio.getId()))) {
+            throw ApiException.conflicto("Ya pediste este espacio en ese horario");
+        }
+        if (!mias.isEmpty() && !Boolean.TRUE.equals(req.confirmarCruce())) {
+            throw new ApiException(HttpStatus.CONFLICT, avisoCruce(mias), ApiException.CRUCE_PROPIO);
         }
 
         Solicitud s = new Solicitud();
@@ -153,10 +161,18 @@ public class SolicitudService {
             throw ApiException.conflicto("La reserva ya comenzó, no se puede cancelar");
         }
 
+        boolean estabaAprobada = s.getEstado() == EstadoSolicitud.APROBADA;
         s.setEstado(EstadoSolicitud.CANCELADA);
         String sufijo = explicacion != null ? " Motivo: " + explicacion : "";
         if (esDueno) {
             chat.mensajeDelSistema(s, s.getUsuario().getNombre() + " canceló la reserva." + sufijo);
+            // Una pendiente solo desaparece de "por revisar"; una aprobada liberó un horario ya asignado
+            if (estabaAprobada) {
+                notificaciones.notificarAdmins(TipoNotificacion.CANCELADA_POR_USUARIO,
+                        "Reserva cancelada por el usuario",
+                        s.getUsuario().getNombre() + " canceló su reserva de " + descripcion(s) + "." + sufijo,
+                        s.getId());
+            }
         } else {
             s.setComentarioAdmin(explicacion);
             chat.mensajeDelSistema(s, "El administrador canceló la reserva." + sufijo);
@@ -222,6 +238,30 @@ public class SolicitudService {
     }
 
     // Apoyo
+
+    /** Máximo de solicitudes que se listan en el aviso de cruce (si hay más, una línea con "…"). */
+    static final int MAX_CRUCES_EN_AVISO = 3;
+
+    /**
+     * "Ya tienes una solicitud en ese horario:" y debajo, una por línea y por hora de inicio, hasta
+     * [MAX_CRUCES_EN_AVISO]: "• LAB-DIS de 16:00 a 19:00". Si hay más, la última línea es "…".
+     */
+    static String avisoCruce(List<Solicitud> mias) {
+        StringBuilder aviso = new StringBuilder(mias.size() == 1
+                ? "Ya tienes una solicitud en ese horario:"
+                : "Ya tienes " + mias.size() + " solicitudes en ese horario:");
+        mias.stream()
+                .sorted(Comparator.comparing((Solicitud m) -> m.getBloques().get(0).getHoraInicio())
+                        .thenComparing(m -> m.getEspacio().getCodigo()))
+                .limit(MAX_CRUCES_EN_AVISO)
+                .forEach(m -> {
+                    List<BloqueHorario> b = m.getBloques();
+                    aviso.append("\n• ").append(m.getEspacio().getCodigo()).append(" de ")
+                            .append(b.get(0).getHoraInicio()).append(" a ").append(b.get(b.size() - 1).getHoraFin());
+                });
+        if (mias.size() > MAX_CRUCES_EN_AVISO) aviso.append("\n…");
+        return aviso.toString();
+    }
 
     /**
      * Los bloques deben existir, ser seguidos (p. ej. 3-4-5), no superar el máximo

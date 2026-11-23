@@ -82,4 +82,8 @@ public class Solicitud {
     /** Cuándo un administrador pasó el chat a "Cerrados" (null = no lo ha cerrado). */
     @Column(name = "chat_cerrado_en")
     private LocalDateTime chatCerradoEn;
+
+    /** Cuándo se avisó "tu reserva es hoy" (null = todavía no): así se avisa una sola vez. */
+    @Column(name = "recordatorio_enviado_en")
+    private LocalDateTime recordatorioEnviadoEn;
 }

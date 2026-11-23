@@ -17,23 +17,28 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Convierte cualquier error en un JSON con la misma forma:
- * { "estado": 409, "error": "CONFLICT", "mensaje": "...", "fecha": "..." }
+ * { "estado": 409, "error": "CONFLICT", "mensaje": "...", "codigo": null, "fecha": "..." }
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    public record ErrorResponse(int estado, String error, String mensaje, LocalDateTime fecha) {
+    /** [codigo]: para que la app reconozca un caso concreto (p. ej. CRUCE_PROPIO); casi siempre null. */
+    public record ErrorResponse(int estado, String error, String mensaje, String codigo, LocalDateTime fecha) {
         static ResponseEntity<ErrorResponse> de(HttpStatus status, String mensaje) {
+            return de(status, mensaje, null);
+        }
+
+        static ResponseEntity<ErrorResponse> de(HttpStatus status, String mensaje, String codigo) {
             return ResponseEntity.status(status)
-                    .body(new ErrorResponse(status.value(), status.name(), mensaje, LocalDateTime.now()));
+                    .body(new ErrorResponse(status.value(), status.name(), mensaje, codigo, LocalDateTime.now()));
         }
     }
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ErrorResponse> api(ApiException e) {
-        return ErrorResponse.de(e.getStatus(), e.getMessage());
+        return ErrorResponse.de(e.getStatus(), e.getMessage(), e.getCodigo());
     }
 
     /** Errores de @Valid: junta los mensajes de cada campo. */
