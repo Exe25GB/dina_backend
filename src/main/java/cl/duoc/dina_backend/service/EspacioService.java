@@ -42,6 +42,27 @@ public class EspacioService {
                 .toList();
     }
 
+    /** Solo ADMIN. El código se guarda en mayúsculas y no se puede repetir ("s 41" → "S 41"). */
+    @Transactional
+    public EspacioDto crear(CrearEspacioRequest req) {
+        String codigo = req.codigo().trim().toUpperCase();
+        if (espacioRepository.existsByCodigo(codigo)) {
+            throw ApiException.conflicto("Ya existe un espacio con el código " + codigo);
+        }
+        Espacio e = new Espacio();
+        e.setCodigo(codigo);
+        e.setNombre(req.nombre().trim());
+        e.setEdificio(req.edificio());
+        e.setPiso(req.piso());
+        e.setTipo(req.tipo());
+        e.setCapacidad(req.capacidad());
+        e.setEscuela(req.escuela());
+        e.setProyector(req.proyector());
+        e.setComputadores(req.computadores());
+        e.setClimatizacion(req.climatizacion());
+        return EspacioDto.de(espacioRepository.save(e));
+    }
+
     @Transactional(readOnly = true)
     public EspacioDto obtener(Long id) {
         return EspacioDto.de(buscarActivo(id));

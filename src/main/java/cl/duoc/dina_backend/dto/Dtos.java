@@ -52,6 +52,19 @@ public final class Dtos {
         }
     }
 
+    /** Cuerpo de POST /api/admin/espacios. [escuela] null = uso general. */
+    public record CrearEspacioRequest(
+            @NotBlank(message = "es obligatorio") @Size(max = 30, message = "máximo 30 caracteres") String codigo,
+            @NotBlank(message = "es obligatorio") @Size(max = 120, message = "máximo 120 caracteres") String nombre,
+            @NotNull(message = "es obligatorio") Edificio edificio,
+            @Min(value = -2, message = "debe ser -2 o más") @Max(value = 10, message = "debe ser 10 o menos") int piso,
+            @NotNull(message = "es obligatorio") TipoEspacio tipo,
+            @Min(value = 1, message = "debe ser al menos 1") @Max(value = 500, message = "máximo 500") int capacidad,
+            Escuela escuela,
+            boolean proyector,
+            boolean computadores,
+            boolean climatizacion) {}
+
     public record BloqueDto(Long id, int numero, LocalTime horaInicio, LocalTime horaFin) {
         public static BloqueDto de(BloqueHorario b) {
             return new BloqueDto(b.getId(), b.getNumero(), b.getHoraInicio(), b.getHoraFin());
